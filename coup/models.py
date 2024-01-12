@@ -44,7 +44,6 @@ class CoupGame:
             self.exchange(actor)
         elif action == "steal":
             self.steal(actor, target)
-        # Add more action methods as needed
 
     def income(self, player):
         player.coins += 1
@@ -100,11 +99,20 @@ class CoupGame:
 
     def challenge(self, challenger, target, claimed_action):
         actual_action = self.get_actual_action(target, claimed_action)
-        if actual_action:
-            if actual_action != claimed_action:
-                self.eliminate_player(target)
-            else:
-                self.eliminate_player(challenger)
+        if actual_action and actual_action != claimed_action:
+            self.lose_influence(target)
+            return f"{challenger} successfully challenged {target}'s {claimed_action}. {target} loses 1 influence."
+        return None  # No challenge resolution if actual action is not determined or challenge failed
+
+    def lose_influence(self, player):
+        # Lose one influence (remove one card)
+        if player.cards:
+            lost_card = random.choice(player.cards)
+            player.cards.remove(lost_card)
+            # Redistribute the lost card back to the deck
+            self.deck.append(lost_card)
+            return lost_card
+        return None  # No influence to lose
 
     def block_action(self, blocker, actor, claimed_action):
         actual_action = self.get_actual_action(actor, claimed_action)
@@ -112,8 +120,27 @@ class CoupGame:
             self.eliminate_player(blocker)
 
     def get_actual_action(self, player, claimed_action):
-        # For simplicity, assume players always perform the claimed action
+        # Check if the claimed action can be challenged or blocked
+        if claimed_action in ["tax", "assassinate", "steal"]:
+            return self.challenge_or_block(player, claimed_action)
         return claimed_action
+
+    def challenge_or_block(self, player, claimed_action):
+        # Simulate a challenge or block
+        challenge_target = random.choice(self.players)
+        if challenge_target == player:
+            challenge_target = self.get_other_player(player)
+        if random.choice([True, False]):  # Randomly decide if it's challenged or blocked
+            return self.challenge(player, challenge_target, claimed_action)
+        else:
+            return self.block_action(player, challenge_target, claimed_action)
+        
+    def get_other_player(self, player):
+        # Get another player that is not the specified player
+        for other_player in self.players:
+            if other_player != player:
+                return other_player
+        return None
 
     def check_end_of_game(self):
         # Check if the game has ended
