@@ -7,6 +7,7 @@ class Player:
         self.name = name
         self.coins = 2
         self.cards = []
+        self.available_actions = []
 
     def __str__(self):
         return f"{self.name}"
@@ -32,7 +33,56 @@ class CoupGame:
         # Deal two cards to each player
         for player in self.players:
             player.cards.extend([self.deal_card(), self.deal_card()])
+        
+        #Store current actions being performed
+        self.current_turn_actions = []
+
+
+    #Handles all incoming actions
+    def handle_actions(self, action, target):
+
+        if action == "income":
+            self.income(self.get_current_player())
+
+        #Check if action is challengeable. This takes precedence over blocking
+        challengable_actions = ["tax", "assassinate", "steal", "exchange", "block_foreign_aid", "block_steal", "block_assassinate"]
+        if action in challengable_actions:
+            #If challengeable, change player's available actions to challenge
+            #Current player can't challenge their own action
+            self.set_player_available_actions(self.get_current_player(), "")
+            #Set all other players to challenge
+            for player in self.players:
+                if player != self.get_current_player():
+                    self.set_player_available_actions(player, "challenge")
+            
+            #Append action to current turn actions
+            self.current_turn_actions.append(action)
+
+        #Check if action is blockable
+        blockable_actions = ["foreign_aid", "steal", "assassinate"]
+        if action in blockable_actions:
+            #If blockable, change player's available actions to block
+            #Current player can't block their own action
+            self.set_player_available_actions(self.get_current_player(), "")
+            #Set all other players to block
+            for player in self.players:
+                if player != self.get_current_player():
+                    self.set_player_available_actions(player, "block")
+            
+            #Append action to current turn actions
+            self.current_turn_actions.append(action)
+
+
+
+
+        self.next_turn()
+        return
     
+    def set_player_available_actions(self, player, action):
+        #Set player's available actions
+        player.available_actions = [action]
+        return
+
     def deal_card(self):
         return self.deck.pop(0)
     
@@ -53,37 +103,6 @@ class CoupGame:
         return None  # Player not found
         
 
-    def perform_action(self, actor, target, action):
-        # Basic actions
-        if action == "income":
-            self.income(actor)
-        elif action == "foreign_aid":
-            self.foreign_aid(actor)
-        elif action == "coup":
-            self.coup(actor, target)
-
-        #Influence actions
-        elif action == "tax":
-            self.tax(actor)
-        elif action == "assassinate":
-            self.assassinate(actor, target)
-        elif action == "exchange":
-            self.exchange(actor)
-        elif action == "steal":
-            self.steal(actor, target)
-        
-        #Counteractions, challenges, and allow
-        elif action == "challenge":
-            self.challenge(actor, target, action)
-        elif action == "block":
-            self.block_action(actor, target, action)
-        elif action == "allow":
-            self.allow_action(actor, action)
-        
-        # Check if the game has ended
-        if self.check_end_of_game():
-            self.reset_game()
-
     #Basic Actions: income, foreign aid, coup
     def income(self, player):
         player.coins += 1
@@ -95,7 +114,6 @@ class CoupGame:
         if actor.coins >= 7:
             actor.coins -= 7
             self.lose_influence(target) 
-            #Check if target is eliminated
 
             
     #Influence Actions: tax, assassinate, exchange, steal
@@ -121,12 +139,22 @@ class CoupGame:
         else:
             target.coins = 0
             actor.coins += target.coins
-            
+    
+    #Blockable Actions: foreign aid, steal, assassinate
+    def block_foreign_aid(self, player):
+        return
+    
+    def block_steal(self, player):
+        return
+    
+    def block_assassinate(self, player):
+        return
+    
 
-    def block_action(self, blocker, actor, claimed_action):
-        actual_action = self.get_actual_action(actor, claimed_action)
-        if actual_action and actual_action == claimed_action:
-            self.eliminate_player(blocker)
+            
+    def map_available_actions(self):
+        
+        return
 
     def eliminate_player(self, player):
         # Eliminate a player from the game
@@ -145,13 +173,6 @@ class CoupGame:
             return card
         return None  # Card not found
 
-    def challenge(self, challenger, target, claimed_action):
-        actual_action = self.get_actual_action(target, claimed_action)
-        if actual_action and actual_action != claimed_action:
-            self.lose_influence(target)
-            return f"{challenger} successfully challenged {target}'s {claimed_action}. {target} loses 1 influence."
-        return None  # No challenge resolution if actual action is not determined or challenge failed
-
     def lose_influence(self, player):
         # Lose one influence (remove one card)
         if player.cards:
@@ -166,12 +187,6 @@ class CoupGame:
             return lost_card
         return None  # No influence to lose
 
-    def get_actual_action(self, player, claimed_action):
-        # Check if the claimed action can be challenged or blocked
-        if claimed_action in ["tax", "assassinate", "steal"]:
-            return self.challenge_or_block(player, claimed_action)
-        return claimed_action
-
     def check_end_of_game(self):
         # Check if the game has ended
         return len(self.players) == 1
@@ -180,7 +195,8 @@ class CoupGame:
         # Reset the game state for a new round
         self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
         self.shuffle_deck()
-        # Reset the players
+        self.current_action = None
+        # Reset the players 
         for player in self.players:
             player.coins = 2
             player.cards = []
@@ -189,5 +205,3 @@ class CoupGame:
 
     def next_turn(self):
         self.current_player_index = (self.current_player_index + 1) % len(self.players)
-
-# ... (other methods and game logic)

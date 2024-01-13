@@ -27,17 +27,14 @@ def perform_action():
     target = request.form.get('target')
     current_player = game.get_current_player()
 
-    if action:
-        if target:
-            target_player = game.get_player_by_name(target)
-            game.perform_action(current_player, target_player, action)
-            action_log.append(f"{current_player.name} attempted to {action} {target_player.name}")
-            action_log.append(f"{current_player.name} chose to {action} {target_player.name}")
-        else:
-            game.perform_action(current_player, None, action)
-            action_log.append(f"{current_player.name} chose to {action}")
 
-    game.next_turn()
+
+    #Handle all incoming actions
+    game.handle_actions(action, target)
+    
+    #Actions should be determined to be challenged before any blocking occurs
+        #Challengable actions are: Tax, Assassinate, Steal, Exchange, blockable actions
+
     return redirect(url_for('index'))
 
 @app.route('/reset_game', methods=['GET'])
