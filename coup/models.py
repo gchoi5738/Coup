@@ -1,13 +1,16 @@
 # coup/models.py
 import random
 
+
+DEFAULT_COINS = 2
+AVAILABLE_ACTIONS = ["income", "foreign_aid", "tax", "assassinate", "exchange", "steal"]
 class Player:
 
     def __init__(self, name):
         self.name = name
         self.coins = 2
         self.cards = []
-        self.available_actions = []
+        self.available_actions = AVAILABLE_ACTIONS
 
     def __str__(self):
         return f"{self.name}"
@@ -37,40 +40,74 @@ class CoupGame:
         #Store current actions being performed
         self.current_turn_actions = []
 
+    #Reset all available actions to empty
+    def reset_available_actions(self, player):
+        player.available_actions = []
 
+    #Get next player. If current player is last player, return first player
+    def get_next_player(self):
+        if self.current_player_index == len(self.players) - 1:
+            return self.players[0]
+        else:
+            return self.players[self.current_player_index + 1]
+        
     #Handles all incoming actions
     def handle_actions(self, action, target):
 
         if action == "income":
             self.income(self.get_current_player())
+            #Reset all players' available actions
+            for player in self.players:
+                player.available_actions = AVAILABLE_ACTIONS
+            
+            #Set next player's available actions to available actions
+            self.set_player_available_actions(self.get_next_player(), AVAILABLE_ACTIONS)
+
+            #Check if coup is available as an option
+            if self.get_current_player().coins >= 7:
+                self.add_player_available_actions(self.get_current_player(), ["coup"])
+            
 
         #Check if action is challengeable. This takes precedence over blocking
         challengable_actions = ["tax", "assassinate", "steal", "exchange", "block_foreign_aid", "block_steal", "block_assassinate"]
+        #If challengeable, change player's available actions to challenge
         if action in challengable_actions:
-            #If challengeable, change player's available actions to challenge
             #Current player can't challenge their own action
-            self.set_player_available_actions(self.get_current_player(), "")
-            #Set all other players to challenge
+            self.reset_available_actions(self.get_current_player())
+            #Set all other players available actions to challenge
             for player in self.players:
                 if player != self.get_current_player():
-                    self.set_player_available_actions(player, "challenge")
+                    self.set_player_available_actions(player, ["challenge", "allow"])
             
             #Append action to current turn actions
             self.current_turn_actions.append(action)
 
         #Check if action is blockable
         blockable_actions = ["foreign_aid", "steal", "assassinate"]
+        #If blockable, change player's available actions to block
         if action in blockable_actions:
-            #If blockable, change player's available actions to block
             #Current player can't block their own action
-            self.set_player_available_actions(self.get_current_player(), "")
+            self.reset_available_actions(self.get_current_player())
             #Set all other players to block
             for player in self.players:
                 if player != self.get_current_player():
-                    self.set_player_available_actions(player, "block")
+                    self.set_player_available_actions(player, ["block_" + action , "allow"])
             
             #Append action to current turn actions
             self.current_turn_actions.append(action)
+
+        #Check if action is allow
+        if action == "allow":
+            #Reset all players' available actions
+            for player in self.players:
+                player.available_actions = AVAILABLE_ACTIONS
+            
+            #Set next player's available actions to available actions
+            self.set_player_available_actions(self.get_next_player(), AVAILABLE_ACTIONS)
+
+            #Check if coup is available as an option
+            if self.get_current_player().coins >= 7:
+                self.add_player_available_actions(self.get_current_player(), ["coup"])
 
 
 
@@ -78,10 +115,11 @@ class CoupGame:
         self.next_turn()
         return
     
-    def set_player_available_actions(self, player, action):
-        #Set player's available actions
-        player.available_actions = [action]
-        return
+    def add_player_available_actions(self, player, actions):
+        player.available_actions.extend(actions)
+    
+    def set_player_available_actions(self, player, actions):
+        player.available_actions = actions
 
     def deal_card(self):
         return self.deck.pop(0)
@@ -203,5 +241,10 @@ class CoupGame:
             # Deal two cards to each player
             player.cards.extend([self.deal_card(), self.deal_card()])
 
+        # Reset the current player index
+        self.current_player_index = 0
+        #Reset all players' available actions
+        for player in self.players:
+            player.available_actions = AVAILABLE_ACTIONS
     def next_turn(self):
         self.current_player_index = (self.current_player_index + 1) % len(self.players)

@@ -42,11 +42,6 @@
     <div class="container">
         <div class="player-info">
             <h2>Current Player Turn: {{ current_player.name }}</h2>
-            <form method="post" action="/perform_action">
-                <button type="submit" name="action" value="allow">Allow</button>
-                <button type="submit" name="action" value="block">Block</button>
-                <button type="submit" name="action" value="challenge">Challenge</button>
-            </form>
         </div>
             
         <div class="player-info">
@@ -66,13 +61,9 @@
             <form method="post" action="/perform_action">
                 <label for="action">Choose an action:</label>
                 <select id="action" name="action">
-                    <option value="income">Income</option>
-                    <option value="foreign_aid">Foreign Aid</option>
-                    <option value="coup">Coup</option>
-                    <option value="tax">Tax</option>
-                    <option value="assassinate">Assassinate</option>
-                    <option value="exchange">Exchange</option>
-                    <option value="steal">Steal</option>
+                    {% for available_action in available_actions %}
+                        <option value="{{ available_action }}">{{ available_action }}</option>
+                    {% endfor %}
                 </select>
                 <br>
                 <label for="target">Choose a target (if applicable):</label>

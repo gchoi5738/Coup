@@ -16,10 +16,14 @@ def index():
     current_player = game.get_current_player()
     human_player = game.human_player
     AI_players = game.AI_players
+    available_actions = human_player.available_actions
+
     return render_template('index.html', human_player=human_player,
                                          AI_players=AI_players,
                                          current_player=current_player, 
-                                         action_log=action_log)
+                                         action_log=action_log,
+                                         available_actions=available_actions)
+
 
 @app.route('/perform_action', methods=['POST'])
 def perform_action():
