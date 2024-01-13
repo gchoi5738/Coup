@@ -1,0 +1,84 @@
+<!-- coup/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coup Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .player-info {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .actions {
+            margin-top: 20px;
+        }
+
+        .log {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <form action="{{ url_for('reset_game') }}" method="get">
+        <button type="submit">Reset Game</button>
+    </form>
+    <div class="container">
+        <div class="player-info">
+            <h2>Current Player: {{ current_player.name }}</h2>
+            <p>Coins: {{ current_player.coins }}</p>
+            <p>Cards: {{ current_player.cards | join(', ') }}</p>
+        </div>
+
+        <div class="actions">
+            <h3>Available Actions</h3>
+            <form method="post" action="/perform_action">
+                <label for="action">Choose an action:</label>
+                <select id="action" name="action">
+                    <option value="income">Income</option>
+                    <option value="foreign_aid">Foreign Aid</option>
+                    <option value="coup">Coup</option>
+                    <option value="tax">Tax</option>
+                    <option value="assassinate">Assassinate</option>
+                    <option value="exchange">Exchange</option>
+                    <option value="steal">Steal</option>
+                </select>
+                <br>
+                <label for="target">Choose a target (if applicable):</label>
+                <select id="target" name="target">
+                    {% for player in players %}
+                        {% if player != current_player %}
+                            <option value="{{ player.name }}">{{ player.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <br>
+                <input type="submit" value="Perform Action">
+            </form>
+        </div>
+
+        <div class="log">
+            <h3>Action Log</h3>
+            {% for entry in action_log %}
+                <p>{{ entry }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
