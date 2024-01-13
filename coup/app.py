@@ -1,17 +1,25 @@
 # Coup/coup/app.py
 from flask import Flask, render_template, request, redirect, url_for
 
-from . import app  # Adjust the import statement
+from . import app
 from .models import CoupGame, Player
 
-game = CoupGame([Player("Player1"), Player("AI1"), Player("AI2")])
+#Initialize game
+    #Please Note: Only one player can be playable at a time
+game = CoupGame(human_player = Player("Player"), 
+                AI_players = [Player("AI_Bob"), Player("AI_Annie")])
+
 action_log = []
 
 @app.route('/')
 def index():
     current_player = game.get_current_player()
-    players = game.players
-    return render_template('index.html', current_player=current_player, players=players, action_log=action_log)
+    human_player = game.human_player
+    AI_players = game.AI_players
+    return render_template('index.html', human_player=human_player,
+                                         AI_players=AI_players,
+                                         current_player=current_player, 
+                                         action_log=action_log)
 
 @app.route('/perform_action', methods=['POST'])
 def perform_action():
@@ -23,6 +31,7 @@ def perform_action():
         if target:
             target_player = game.get_player_by_name(target)
             game.perform_action(current_player, target_player, action)
+            action_log.append(f"{current_player.name} attempted to {action} {target_player.name}")
             action_log.append(f"{current_player.name} chose to {action} {target_player.name}")
         else:
             game.perform_action(current_player, None, action)

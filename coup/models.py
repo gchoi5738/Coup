@@ -2,6 +2,7 @@
 import random
 
 class Player:
+
     def __init__(self, name):
         self.name = name
         self.coins = 2
@@ -11,31 +12,57 @@ class Player:
         return f"{self.name}"
 
 class CoupGame:
-    def __init__(self, players):
-        self.players = players
-        self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
-        self.shuffle_deck()
-        self.current_player_index = 0  # Index of the current player in the players list
+    def __init__(self, human_player, AI_players):
+        #Both human_player and AI_players are Player objects
+        self.human_player = human_player
+        self.AI_players = AI_players
 
+        #List of all players
+        self.players = [human_player] + AI_players
+
+        #List of all cards in the game
+        self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
+
+        # Shuffle the deck before dealing
+        self.shuffle_deck()
+
+        # Index of the current player in the players list
+        self.current_player_index = 0  
+
+        # Deal two cards to each player
+        for player in self.players:
+            player.cards.extend([self.deal_card(), self.deal_card()])
+    
+    def deal_card(self):
+        return self.deck.pop(0)
+    
     def shuffle_deck(self):
         random.shuffle(self.deck)
 
     def get_current_player(self):
         return self.players[self.current_player_index]
+    
+    #Check if player is eliminated
+    def is_eliminated(self, player):
+        return not player.cards
 
     def get_player_by_name(self, name):
         for player in self.players:
             if player.name == name:
                 return player
         return None  # Player not found
+        
 
     def perform_action(self, actor, target, action):
+        # Basic actions
         if action == "income":
             self.income(actor)
         elif action == "foreign_aid":
             self.foreign_aid(actor)
         elif action == "coup":
             self.coup(actor, target)
+
+        #Influence actions
         elif action == "tax":
             self.tax(actor)
         elif action == "assassinate":
@@ -44,7 +71,20 @@ class CoupGame:
             self.exchange(actor)
         elif action == "steal":
             self.steal(actor, target)
+        
+        #Counteractions, challenges, and allow
+        elif action == "challenge":
+            self.challenge(actor, target, action)
+        elif action == "block":
+            self.block_action(actor, target, action)
+        elif action == "allow":
+            self.allow_action(actor, action)
+        
+        # Check if the game has ended
+        if self.check_end_of_game():
+            self.reset_game()
 
+    #Basic Actions: income, foreign aid, coup
     def income(self, player):
         player.coins += 1
 
@@ -54,15 +94,18 @@ class CoupGame:
     def coup(self, actor, target):
         if actor.coins >= 7:
             actor.coins -= 7
-            self.eliminate_player(target)
+            self.lose_influence(target) 
+            #Check if target is eliminated
 
+            
+    #Influence Actions: tax, assassinate, exchange, steal
     def tax(self, player):
         player.coins += 3
 
     def assassinate(self, actor, target):
         if actor.coins >= 3:
             actor.coins -= 3
-            self.eliminate_player(target)
+            self.lose_influence(target)
 
     def exchange(self, player):
         self.shuffle_deck()
@@ -78,7 +121,12 @@ class CoupGame:
         else:
             target.coins = 0
             actor.coins += target.coins
-        # You might want to add additional logic for handling stealing cards, if applicable
+            
+
+    def block_action(self, blocker, actor, claimed_action):
+        actual_action = self.get_actual_action(actor, claimed_action)
+        if actual_action and actual_action == claimed_action:
+            self.eliminate_player(blocker)
 
     def eliminate_player(self, player):
         # Eliminate a player from the game
@@ -111,13 +159,12 @@ class CoupGame:
             player.cards.remove(lost_card)
             # Redistribute the lost card back to the deck
             self.deck.append(lost_card)
+
+            # Check if the player has lost all influence
+            if not player.cards:
+                self.eliminate_player(player)
             return lost_card
         return None  # No influence to lose
-
-    def block_action(self, blocker, actor, claimed_action):
-        actual_action = self.get_actual_action(actor, claimed_action)
-        if actual_action and actual_action == claimed_action:
-            self.eliminate_player(blocker)
 
     def get_actual_action(self, player, claimed_action):
         # Check if the claimed action can be challenged or blocked
@@ -125,33 +172,20 @@ class CoupGame:
             return self.challenge_or_block(player, claimed_action)
         return claimed_action
 
-    def challenge_or_block(self, player, claimed_action):
-        # Simulate a challenge or block
-        challenge_target = random.choice(self.players)
-        if challenge_target == player:
-            challenge_target = self.get_other_player(player)
-        if random.choice([True, False]):  # Randomly decide if it's challenged or blocked
-            return self.challenge(player, challenge_target, claimed_action)
-        else:
-            return self.block_action(player, challenge_target, claimed_action)
-        
-    def get_other_player(self, player):
-        # Get another player that is not the specified player
-        for other_player in self.players:
-            if other_player != player:
-                return other_player
-        return None
-
     def check_end_of_game(self):
         # Check if the game has ended
         return len(self.players) == 1
 
     def reset_game(self):
         # Reset the game state for a new round
+        self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
         self.shuffle_deck()
+        # Reset the players
         for player in self.players:
             player.coins = 2
             player.cards = []
+            # Deal two cards to each player
+            player.cards.extend([self.deal_card(), self.deal_card()])
 
     def next_turn(self):
         self.current_player_index = (self.current_player_index + 1) % len(self.players)

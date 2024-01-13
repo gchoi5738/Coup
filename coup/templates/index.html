@@ -41,10 +41,20 @@
     </form>
     <div class="container">
         <div class="player-info">
-            <h2>Current Player: {{ current_player.name }}</h2>
-            <p>Coins: {{ current_player.coins }}</p>
-            <p>Cards: {{ current_player.cards | join(', ') }}</p>
+            <h2>Current Player Turn: {{ current_player.name }}</h2>
         </div>
+            
+        <div class="player-info">
+            <p>Your Coins: {{ human_player.coins }}</p>
+            <p>Your Cards: {{ human_player.cards | join(', ') }}</p>
+        </div>
+
+        <h3>Other Player Info</h3>
+        {% for AI_player in AI_players %}
+            <p>{{ AI_player.name }} coins: {{ AI_player.coins }} </p>
+            <p> Cards: {{ AI_player.cards | length }}</p>
+            <br>
+        {% endfor %}
 
         <div class="actions">
             <h3>Available Actions</h3>
@@ -62,10 +72,8 @@
                 <br>
                 <label for="target">Choose a target (if applicable):</label>
                 <select id="target" name="target">
-                    {% for player in players %}
-                        {% if player != current_player %}
-                            <option value="{{ player.name }}">{{ player.name }}</option>
-                        {% endif %}
+                    {% for AI_player in AI_players %}
+                        <option value="{{ AI_player.name }}">{{ AI_player.name }}</option>
                     {% endfor %}
                 </select>
                 <br>
