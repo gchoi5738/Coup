@@ -1,9 +1,10 @@
-from coup.models import CoupGame, Player
+from coup.game import CoupGame, Player
 import random
 import time
 
 def setup_game():
-    return CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
+    return CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie"),
+                                                                Player("AI_Chris"), Player("AI_Dave")])
 
 def play_game():
     restart = input('Do you want to play again? (yes/no) ')
@@ -40,15 +41,14 @@ def start_game():
            target = input("Enter a target (if applicable): ")
 
        else:
-           # Otherwise, generate a random action for the AI 
-           action_list = ['income', 'steal']
+           # Random action for AI players
            action = random.choice(current_player.available_actions)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets
            target = random.choice([player for player in game.players if player != current_player and player not in game.dead_players])
 
        # Execute the action
-       #Sleep for 1 second to make it easier to read if the AI is playing
+       # Sleep for 1 second to make it easier to read if the AI is playing
        if current_player != game.human_player:
             time.sleep(1)
            
