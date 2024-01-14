@@ -33,6 +33,9 @@ class CoupGame:
 
         # Index of the current player in the players list
         self.current_player_index = 0  
+        
+        #Set current player
+        self.current_player = self.players[self.current_player_index]
 
         # Deal two cards to each player
         for player in self.players:
@@ -40,6 +43,7 @@ class CoupGame:
         
         #Store current actions being performed
         self.current_turn_actions = []
+
 
     #Reset all available actions to empty
     def reset_available_actions(self, player):
@@ -53,15 +57,16 @@ class CoupGame:
             return self.players[self.current_player_index + 1]
         
     def handle_actions(self, actor, action, target):
+        print(f"{actor.name} is performing {action} on {target}.")
         #Handle all incoming actions
         if action == "income":
             self.income(actor)
-            #Print for console
-            print(f"{actor.name} took income. \n")
+            
 
         elif action == "foreign_aid":
-            self.check_blockable_action(actor, action, target)
+            self.check_if_player_blocks_foreign_aid(actor, action)
             self.foreign_aid(actor)
+            
         elif action == "tax":
             self.tax(actor)
         elif action == "assassinate":
@@ -77,10 +82,49 @@ class CoupGame:
         self.current_turn_actions.append(action)
 
 
-    def check_blockable_action(self, actor, action, target):
-        #prompt player to block action(actor can't block their own action) 
-        return
+    def check_if_player_blocks_foreign_aid(self, actor, action):
 
+        # If the actor(the player performing the block) is the human player, skip the input for human player
+        if actor != self.human_player:
+            #Prompt human player to block or allow foreign aid
+            block_decision = input("Do you want to block the action? Enter 'Block' or 'Allow': ")
+            if block_decision.lower() == "block":
+                self.block_foreign_aid(self.human_player, actor)
+                
+            else:
+                #Ask AI players if they want to block foreign aid
+                #Look for first AI player to block foreign aid, then break
+                for player in self.AI_players:
+                    #Make sure AI player is not dead and is not the actor
+                    if player not in self.dead_players and player != actor:
+                        #Shuffle randomly between blocking and allowing
+                        block_decision = random.choice(["block", "allow"])
+                        if block_decision == "block":
+                            self.block_foreign_aid(player, actor)
+                            break
+                        else:
+                            continue
+
+    def check_challenge(self, target, action):
+        #Create a challenge for the human player if they aren't the target
+        if target != self.human_player:
+            #Prompt human player to challenge
+            challenge_decision = input("Do you want to challenge the' {action}? 'Enter 'Challenge' or 'Allow': ")
+            if challenge_decision.lower() == "challenge":
+                self.challenge(self.human_player, target)
+            else:
+                #Ask AI players if they want to challenge
+                #Look for first AI player to challenge, then break
+                for player in self.AI_players:
+                    #Make sure AI player is not dead and is not the target
+                    if player not in self.dead_players and player != target:
+                        #Shuffle randomly between challenging and allowing
+                        challenge_decision = random.choice(["challenge", "allow"])
+                        if challenge_decision == "challenge":
+                            self.challenge(player, target, action)
+                            break
+                        else:
+                            continue
 
 
 
@@ -97,8 +141,8 @@ class CoupGame:
         random.shuffle(self.deck)
 
     def get_current_player(self):
-        
         return self.players[self.current_player_index]
+    
     #Check if player is eliminated
     def is_eliminated(self, player):
         return not player.cards
@@ -113,9 +157,14 @@ class CoupGame:
     #Basic Actions: income, foreign aid, coup
     def income(self, player):
         player.coins += 1
+        print(f"{player.name} took income. \n")
+        self.handle_next_turn()
+
 
     def foreign_aid(self, player):
         player.coins += 2
+        print(f"{player.name} took foreign aid. \n")
+        self.handle_next_turn()
 
     def coup(self, actor, target):
         if actor.coins >= 7:
@@ -148,7 +197,8 @@ class CoupGame:
             actor.coins += target.coins
     
     #Blockable Actions: foreign aid, steal, assassinate
-    def block_foreign_aid(self, player):
+    def block_foreign_aid(self, target, actor):
+        print(f"{target.name} blocked {actor.name}'s foreign aid.")
         return
     
     def block_steal(self, player):
@@ -157,6 +207,59 @@ class CoupGame:
     def block_assassinate(self, player):
         return
     
+    def challenge(self, challenger, target, action):
+    # If target is human player, prompt human player to reveal a card
+        victor = None
+        if target == self.human_player:
+            victor = self.handle_human_challenge(challenger, target)
+        else:
+            victor = self.handle_AI_challenge(challenger, target, action)
+        return victor
+
+    #Return the victor of the challenge
+    def handle_human_challenge(self, challenger, target):
+        # Prompt human player to choose a card to reveal
+        print(f"Which card do you want to reveal? {target.cards}")
+        revealed_card = input("Enter a card to reveal: ")
+
+        # Check if card is in human player's cards
+        if revealed_card in target.cards:
+            target.cards.remove(revealed_card)
+            # Redistribute the lost card back to the deck
+            self.deck.append(revealed_card)
+            print(f"{self.human_player.name} revealed a {revealed_card}. \n")
+            return target
+        else:
+            print(f"{self.human_player.name} did not have a {revealed_card}. \n")
+            self.lose_influence(self.human_player)
+            return challenger
+
+    #Return the victor of the challenge
+    def handle_AI_challenge(self, challenger, target, action):
+        # Check if target has the card to perform the action
+        card_to_reveal = self.get_card_for_challenge(target, action)
+        revealed_card = self.reveal_card(target, card_to_reveal)
+
+        if revealed_card:
+            print(f"{target.name} revealed a {card_to_reveal}.")
+            return target
+        else:
+            print(f"{target.name} did not have a {card_to_reveal}.")
+            self.lose_influence(target)
+            return challenger
+
+    def get_card_for_challenge(self, target, action):
+        # Determine the card the AI player should reveal based on the action
+        if action == "foreign_aid":
+            return "duke"
+        elif action == "steal":
+            return "captain" if "captain" in target.cards else "ambassador"
+        elif action == "assassinate":
+            return "contessa"
+        elif action == "exchange":
+            return "ambassador"
+        else:
+            return None
 
 
     def eliminate_player(self, player):
@@ -178,9 +281,27 @@ class CoupGame:
 
     def lose_influence(self, player):
         # Lose one influence (remove one card)
-        if player.cards:
+
+        #If human player is losing influence, prompt them to choose which card to lose(if they have more than one)
+        if player == self.human_player:
+            if len(player.cards) > 1:
+                print(f"Which card do you want to lose? {player.cards}")
+                lost_card = input("Enter a card to lose: ")
+                player.cards.remove(lost_card)
+                # Redistribute the lost card back to the deck
+                self.deck.append(lost_card)
+            else:
+                lost_card = player.cards[0]
+                player.cards.remove(lost_card)
+                # Redistribute the lost card back to the deck
+                self.deck.append(lost_card)
+
+            print(f"{self.human_player.name} lost a {lost_card}. \n")
+        elif player.cards:
             lost_card = random.choice(player.cards)
             player.cards.remove(lost_card)
+
+            print(f"{player.name} lost a {lost_card}. \n")
             # Redistribute the lost card back to the deck
             self.deck.append(lost_card)
 
@@ -233,6 +354,7 @@ class CoupGame:
             self.add_player_available_actions(self.get_next_player(), ["coup"])
         
         
+        
     def make_random_AI_move(self):
         # Make a random AI move
         current_player = self.get_current_player()
@@ -246,8 +368,10 @@ class CoupGame:
         # Set the next player's turn
         if self.current_player_index == len(self.players) - 1:
             self.current_player_index = 0
+            self.current_player = self.players[0]
         else:
             self.current_player_index += 1
+            self.current_player = self.players[self.current_player_index]
 
         
         
