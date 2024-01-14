@@ -31,7 +31,7 @@ def start_game():
        else:
            # Otherwise, generate a random action for the AI
            #FOR TESTING REASONS, REFERENCE ACTION LIST FOR COMPLETED AND IN PROGRESS ACTIONS
-           action_list = ['income', 'coup', 'tax']
+           action_list = ['income', 'foreign_aid', 'coup', 'tax', 'assassinate']
            action = random.choice(action_list)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets

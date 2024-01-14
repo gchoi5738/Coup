@@ -81,6 +81,17 @@ class CoupGame:
             self.coup(actor, target)
             return True
         
+    def get_target_player(self, target):
+        # If target is already a Player instance, return it directly
+        if isinstance(target, Player):
+            return target
+        else:
+            # If target is a string, get player by name
+            target_player = self.get_player_by_name(target)
+            # If target_player is None, target is not a valid player
+            if target_player is None:
+                print("Invalid target. Please try again.")
+            return target_player
     #Handle all incoming actions
     def handle_actions(self, actor, action, target):
 
@@ -91,30 +102,25 @@ class CoupGame:
 
         if (self.check_if_must_coup(actor, action, target)):
             return
-
         
-        if action == "income":
+        elif action == "income":
             self.income(actor)
-            
+            return
+
         elif action == "foreign_aid":
             if (self.check_if_player_blocks_foreign_aid(actor, action)):
                 return
-            self.foreign_aid(actor)
+            else:
+                self.foreign_aid(actor)
+                return
             
         elif action == "coup":
             if actor.coins < 7:
                 print("You do not have enough coins to coup. Please try again.")
                 return
-            #If target is already type Player, no need to get player by name
-            if isinstance(target, Player):
-                self.coup(actor, target)
-            #Else target is a string, get player by name
-            else:
-                target = self.get_player_by_name(target)
-                #If target is None, target is not a valid player
-                if target == None:
-                    print("Invalid target. Please try again.")
-                    return
+            #Handle different target types(target can be a string if human types, and a Player object if AI)
+            target = self.get_target_player(target)
+
             self.coup(actor, target)
             return
 
@@ -128,7 +134,20 @@ class CoupGame:
                 return
 
         elif action == "assassinate":
-            self.assassinate(actor, target)
+            if actor.coins < 3:
+                print("You do not have enough coins to assassinate. Please try again.")
+                return
+            #Handle different target types(target can be a string if human types, and a Player object if AI)
+            target = self.get_target_player(target)
+            victor = self.check_challenge(target=target, action='assassinate')
+            #Challenge was successful or no one challenged, check if any people block
+            if victor == None or victor == actor:
+                if (self.check_if_target_blocks(actor, target, "assassinate", self.block_assassinate)):
+                    return
+                else:
+                    self.assassinate(actor, target)
+                    return
+
         elif action == "exchange":
             self.exchange(actor)
         elif action == "steal":
@@ -140,7 +159,23 @@ class CoupGame:
         self.current_turn_actions.append(action)
 
 
+    def check_if_target_blocks(self, actor, target, action, block_action):
+        #If target is human player, prompt them to block
+        if target == self.human_player:
+            block_decision = input("Do you want to block the action? Enter 'Block' or 'Allow': ")
+            if block_decision.lower() == "block":
+                victor = self.check_challenge(target=self.human_player, action=action)
+                #Challenge was successful, block
+                if victor == None or victor == self.human_player:
+                    block_action(actor, target, action)
+                    return True
+        return False
+
+
+
+
     #Return True if player blocks foreign aid, False otherwise. Also checks any challenges to the block
+    #handled differently from block_steal and block_assassinate because foreign aid is a targetless action
     def check_if_player_blocks_foreign_aid(self, actor, action):
 
         # If the actor(the player performing the block) is the human player, skip the input for human player
@@ -271,6 +306,8 @@ class CoupGame:
         if actor.coins >= 3:
             actor.coins -= 3
             self.lose_influence(target)
+            print(f"{actor.name} assassinated {target.name}. \n")
+            self.handle_next_turn()
 
     def exchange(self, player):
         self.shuffle_deck()
@@ -355,7 +392,7 @@ class CoupGame:
             return challenger
 
     def get_card_for_challenge(self, target, action):
-        # Determine the card the AI player should reveal based on the action
+        # Determine the right card to reveal challenge
         if action == "block_foreign_aid" or action == "tax":
             return "duke"
         elif action == "block_steal":
