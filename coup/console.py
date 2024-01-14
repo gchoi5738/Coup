@@ -31,7 +31,6 @@ def start_game():
                 game = setup_game()
                 print_game_state(game)
               
-      
        # Get the current player
        current_player = game.get_current_player()
 
@@ -42,7 +41,7 @@ def start_game():
 
        else:
            # Otherwise, generate a random action for the AI 
-        #    action_list = ['income', 'exchange']
+           action_list = ['income', 'steal']
            action = random.choice(current_player.available_actions)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets
@@ -72,7 +71,7 @@ def print_game_state(game):
     GRAY = "\033[97m"
     RESET = "\033[0m"
 
-    print("\n" + "=" * 20)
+    print("\n" + "=" * 80)
     # Print the current player's turn
     print(f"\nCurrent player: {game.get_current_player().name}")
 
@@ -108,7 +107,7 @@ def print_game_state(game):
         print(f"Available actions for {current_player.name}: {', '.join(current_player.available_actions)}")
 
 
-    print("=" * 20 + "\n")
+    print("=" * 80 + "\n")
 
 if __name__ == "__main__":
    start_game()

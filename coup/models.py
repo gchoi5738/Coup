@@ -167,6 +167,8 @@ class CoupGame:
                 else:
                     self.assassinate(actor, target)
                     return
+            self.handle_next_turn()
+            return
 
         elif action == "exchange":
             victor = self.check_challenge(target=actor, action='exchange')
@@ -194,6 +196,8 @@ class CoupGame:
                 else:
                     self.steal(actor, target)
                     return
+            self.handle_next_turn()
+            return
         
         else:
             print("Invalid action. Please try again.")
@@ -394,28 +398,29 @@ class CoupGame:
         else:
             # For AI, randomly decide to swap both, one, or keep both
             decision = random.choice(['swap_both', 'swap_one', 'keep_both'])
-            if decision == 'swap_both':
+
+            if decision == 'swap_both' and len(player.cards) >= 2:
                 cards_to_exchange = random.sample(player.cards, 2)
                 for card in cards_to_exchange:
                     player.cards.remove(card)
                     self.return_to_deck(card)
                 new_cards = [self.deal_card(), self.deal_card()]
                 player.cards.extend(new_cards)
-                print(f"{player.name} exchanged both cards for new cards from the deck. \n")
-            elif decision == 'swap_one':
+                print(f"{player.name} exchanged both cards for new cards from the deck.\n")
+
+            elif decision == 'swap_one' and len(player.cards) >= 1:
                 card_to_exchange = random.choice(player.cards)
                 player.cards.remove(card_to_exchange)
                 self.return_to_deck(card_to_exchange)
                 new_card = self.deal_card()
                 player.cards.append(new_card)
-                print(f"{player.name} exchanged one card for a new card from the deck. \n")
+                print(f"{player.name} exchanged one card for a new card from the deck.\n")
+
             else:
-                print(f"{player.name} decided to keep both cards. \n")
+                print(f"{player.name} decided to keep both cards.\n")
 
         self.handle_next_turn()
         return
-
-
 
     def steal(self, actor, target):
         if target.coins >= STEAL_GAIN:
@@ -559,6 +564,9 @@ class CoupGame:
             if len(player.cards) > 1:
                 print(f"Which card do you want to lose? {player.cards}")
                 lost_card = input("Enter a card to lose: ")
+                while lost_card not in player.cards:
+                    print("That card is not in your hand. Please try again.")
+                    lost_card = input("Enter a card to lose: ")
                 player.cards.remove(lost_card)
                 # Redistribute the lost card back to the deck
                 self.deck.append(lost_card)
