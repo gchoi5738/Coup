@@ -170,11 +170,16 @@ class CoupGame:
         elif action == "exchange":
             victor = self.check_challenge(target=actor, action='exchange')
             #Challenge was successful, exchange
+            print(victor == None or victor == actor)
+            print(victor)
+            print(actor)
             if victor == None or victor == actor:
                 self.exchange(actor)
             else:
                 self.handle_next_turn()
-                return
+                
+            return
+            
         elif action == "steal":
             self.steal(actor, target)
         
@@ -194,13 +199,23 @@ class CoupGame:
                 if victor == None or victor == self.human_player:
                     block_action(actor, target)
                     return True
+        else:
+            #Check if the AI player blocks, The AI Player is the target
+            block_decision = random.choice(["block", "allow"])
+            if block_decision == "block":
+                victor = self.check_challenge(target=target, action="block_" + action)
+                #Challenge was successful, block
+                if victor == None or victor == target:
+                    block_action(actor, target)
+                    return True
+
         return False
 
 
 
 
     #Return True if player blocks foreign aid, False otherwise. Also checks any challenges to the block
-    #handled differently from block_steal and block_assassinate because foreign aid is a targetless action
+        #handled differently from block_steal and block_assassinate because foreign aid is a targetless action
     def check_if_player_blocks_foreign_aid(self, actor, action):
 
         # If the actor(the player performing the block) is the human player, skip the input for human player
@@ -336,11 +351,45 @@ class CoupGame:
             self.handle_next_turn()
 
     def exchange(self, player):
-        self.shuffle_deck()
-        revealed_cards = self.deck[:2]
-        del self.deck[:2]
-        # Simulate the player choosing which cards to keep (for simplicity, keeping both)
-        player.cards.extend(revealed_cards)
+        # If player is human, prompt them to choose two cards to exchange
+        if player == self.human_player:
+            print(f"Which two cards do you want to exchange? {player.cards} \n")
+            card1 = input("Enter the first card to exchange: \n")
+            while card1 not in player.cards:
+                print("That card is not in your hand. Please try again.\n")
+                card1 = input("Enter the first card to exchange: \n")
+            card2 = input("Enter the second card to exchange: \n")
+            while card2 not in player.cards or card2 == card1:
+                print("That card is not in your hand or you entered the same card twice. Please try again.\n")
+                card2 = input("Enter the second card to exchange: \n")
+            keep_card = input(f"Which card do you want to keep? {card1} or {card2}: \n")
+            while keep_card not in [card1, card2]:
+                print("Invalid choice. Please choose either {card1} or {card2}.\n")
+                keep_card = input(f"Which card do you want to keep? {card1} or {card2}: \n")
+
+            player.cards.remove(keep_card)
+            discarded_card = card1 if keep_card == card2 else card2
+            # Redistribute the discarded card back to the deck
+            self.return_to_deck(discarded_card)
+            new_card = self.deal_card()
+            player.cards.append(new_card)
+            print(f"{self.human_player.name} exchanged a {discarded_card} for a new card from the deck. \n")
+        else:
+            # If player is AI, select two cards to exchange randomly
+            card_to_exchange = random.sample(player.cards, 2)
+            keep_card = random.choice(card_to_exchange)
+            card_to_exchange.remove(keep_card)
+            discarded_card = card_to_exchange[0]
+            for card in card_to_exchange:
+                player.cards.remove(card)
+            # Redistribute the discarded card back to the deck
+            self.return_to_deck(discarded_card)
+            new_card = self.deal_card()
+            player.cards.append(new_card)
+            print(f"{player.name} exchanged a {discarded_card} for a new card from the deck. \n")
+
+        self.handle_next_turn()
+
 
     def steal(self, actor, target):
         if target.coins >= STEAL_GAIN:
@@ -402,7 +451,7 @@ class CoupGame:
             print(f"{self.human_player.name} did not have a {card_to_reveal}. \n")
             #Target loses influence
             self.lose_influence(target)
-            return target
+            return challenger
 
 
     #Return the victor of the challenge
