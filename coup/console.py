@@ -58,7 +58,7 @@ def start_game():
        # Execute the action
        # Sleep for 1 second to make it easier to read if the AI is playing
        if current_player != game.human_player:
-            time.sleep(1)
+            time.sleep(2)
            
        game.handle_actions(actor=current_player, action=action, target=target)
 

@@ -7,6 +7,7 @@ AVAILABLE_ACTIONS = ["income", "foreign_aid", "tax", "exchange", "steal"]
 TARGETLESS_ACTIONS = ["income", "foreign_aid", "tax", "exchange"]
 
 #COSTS
+DECK_MULITPLIER = 3
 INCOME_GAIN = 1
 FOREIGN_AID_GAIN = 2
 TAX_GAIN = 3
@@ -36,10 +37,12 @@ class CoupGame:
 
         #List of all players
         self.players = [human_player] + AI_players
+
+        #List of all dead players
         self.dead_players = []
 
         #List of all cards in the game
-        self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
+        self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * DECK_MULITPLIER
 
         # Shuffle the deck before dealing
         self.shuffle_deck()
@@ -53,9 +56,6 @@ class CoupGame:
         # Deal two cards to each player
         for player in self.players:
             player.cards.extend([self.deal_card(), self.deal_card()])
-        
-        #Store current actions being performed
-        self.current_turn_actions = []
     
     def get_alive_players(self):
         ''' Returns:
@@ -224,7 +224,6 @@ class CoupGame:
         else:
             print("Invalid action. Please try again.")
             return
-        self.current_turn_actions.append(action)
 
 
     def check_if_target_blocks(self, actor, target, action, block_action):
