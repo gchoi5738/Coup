@@ -1,19 +1,23 @@
 from coup.models import CoupGame, Player
 import random
 import time
+#make initial game settings that can easily be changed
 def start_game():
    # Initialize the game
    game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
-
+   
    # Main game loop
    while not game.check_end_of_game():
        # Print the current game state
        print_game_state(game)
        if game.human_player in game.dead_players:
-              print("You are dead!")
-              input("Press enter to continue...")
-              game.reset_game()
-              break
+            print("You are dead!")
+            restart = input('Do you want to play again? (yes/no) ')
+            if restart.lower() == 'no':
+                break
+            else:
+                game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
+              
       
        # Get the current player
        current_player = game.get_current_player()
@@ -27,7 +31,7 @@ def start_game():
        else:
            # Otherwise, generate a random action for the AI
            #FOR TESTING REASONS, REFERENCE ACTION LIST FOR COMPLETED AND IN PROGRESS ACTIONS
-           action_list = ['income', 'coup']
+           action_list = ['income', 'coup', 'tax']
            action = random.choice(action_list)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets
@@ -36,6 +40,14 @@ def start_game():
        # Execute the action
        game.handle_actions(actor=current_player, action=action, target=target)
 
+        # Check if the game has ended
+       if game.check_end_of_game():
+            print("Game over!")
+            restart = input('Do you want to play again? (yes/no) ')
+            if restart.lower() == 'no':
+                break
+            else:
+                game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
 
 
 

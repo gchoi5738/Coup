@@ -81,6 +81,7 @@ class CoupGame:
             self.coup(actor, target)
             return True
         
+    #Handle all incoming actions
     def handle_actions(self, actor, action, target):
 
         if action in TARGETLESS_ACTIONS:
@@ -91,7 +92,7 @@ class CoupGame:
         if (self.check_if_must_coup(actor, action, target)):
             return
 
-        #Handle all incoming actions
+        
         if action == "income":
             self.income(actor)
             
@@ -101,11 +102,14 @@ class CoupGame:
             self.foreign_aid(actor)
             
         elif action == "coup":
+            if actor.coins < 7:
+                print("You do not have enough coins to coup. Please try again.")
+                return
             #If target is already type Player, no need to get player by name
             if isinstance(target, Player):
                 self.coup(actor, target)
+            #Else target is a string, get player by name
             else:
-                #Else target is a string, get player by name
                 target = self.get_player_by_name(target)
                 #If target is None, target is not a valid player
                 if target == None:
@@ -250,20 +254,18 @@ class CoupGame:
         self.handle_next_turn()
 
     def coup(self, actor, target_player):
-        if actor.coins >= 7:
-            actor.coins -= 7
-            self.lose_influence(target_player) 
-            
-            self.handle_next_turn()
-        else:
-            print(f"{actor.name} does not have enough coins to coup. \n")
-            return
+        actor.coins -= 7
+        self.lose_influence(target_player) 
+        print(f"{actor.name} couped {target_player.name}. \n")
+        self.handle_next_turn()
 
 
             
     #Influence Actions: tax, assassinate, exchange, steal
     def tax(self, player):
         player.coins += 3
+        print(f"{player.name} took tax. \n")
+        self.handle_next_turn()
 
     def assassinate(self, actor, target):
         if actor.coins >= 3:
@@ -354,7 +356,7 @@ class CoupGame:
 
     def get_card_for_challenge(self, target, action):
         # Determine the card the AI player should reveal based on the action
-        if action == "block_foreign_aid":
+        if action == "block_foreign_aid" or action == "tax":
             return "duke"
         elif action == "block_steal":
             return "captain" if "captain" in target.cards else "ambassador"
