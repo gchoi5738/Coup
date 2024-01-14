@@ -64,7 +64,8 @@ class CoupGame:
             
 
         elif action == "foreign_aid":
-            self.check_if_player_blocks_foreign_aid(actor, action)
+            if (self.check_if_player_blocks_foreign_aid(actor, action)):
+                return
             self.foreign_aid(actor)
             
         elif action == "tax":
@@ -82,6 +83,7 @@ class CoupGame:
         self.current_turn_actions.append(action)
 
 
+    #Return True if player blocks foreign aid, False otherwise. Also checks any challenges to the block
     def check_if_player_blocks_foreign_aid(self, actor, action):
 
         # If the actor(the player performing the block) is the human player, skip the input for human player
@@ -89,7 +91,12 @@ class CoupGame:
             #Prompt human player to block or allow foreign aid
             block_decision = input("Do you want to block the action? Enter 'Block' or 'Allow': ")
             if block_decision.lower() == "block":
-                self.block_foreign_aid(self.human_player, actor)
+                victor = self.check_challenge(target=self.human_player, action='block_foreign_aid')
+                #Challenge was successful, block foreign aid
+                #If victor is None, no one challenged the block
+                if victor == None or victor == self.human_player:
+                    self.block_foreign_aid(self.human_player, actor)
+                    return True
                 
             else:
                 #Ask AI players if they want to block foreign aid
@@ -100,32 +107,39 @@ class CoupGame:
                         #Shuffle randomly between blocking and allowing
                         block_decision = random.choice(["block", "allow"])
                         if block_decision == "block":
-                            self.block_foreign_aid(player, actor)
-                            break
+                            victor = self.check_challenge(target=player, action='block_foreign_aid')
+                            #Challenge was successful, block foreign aid
+                            if victor == None or victor == player:
+                                self.block_foreign_aid(player, actor)
+                                return True
                         else:
                             continue
+        return False
 
     def check_challenge(self, target, action):
-        #Create a challenge for the human player if they aren't the target
+        #Create a challenge prompt for the human player if they aren't the target
         if target != self.human_player:
             #Prompt human player to challenge
-            challenge_decision = input("Do you want to challenge the' {action}? 'Enter 'Challenge' or 'Allow': ")
-            if challenge_decision.lower() == "challenge":
-                self.challenge(self.human_player, target)
-            else:
-                #Ask AI players if they want to challenge
-                #Look for first AI player to challenge, then break
-                for player in self.AI_players:
-                    #Make sure AI player is not dead and is not the target
-                    if player not in self.dead_players and player != target:
-                        #Shuffle randomly between challenging and allowing
-                        challenge_decision = random.choice(["challenge", "allow"])
-                        if challenge_decision == "challenge":
-                            self.challenge(player, target, action)
-                            break
-                        else:
-                            continue
+            challenge_decision = input("Do you want to challenge the '{action}' action on {target.name}? Enter 'Challenge' or 'Allow': ".format(action=action, target=target))
 
+            if challenge_decision.lower() == "challenge":
+                victor = self.challenge(self.human_player, target, action)
+                return victor
+        else:
+            #Ask AI players if they want to challenge
+            #Look for first AI player to challenge
+            for player in self.AI_players:
+                #Make sure AI player is not dead and is not the target
+                if player not in self.dead_players and player != target:
+                    #Shuffle randomly between challenging and allowing
+                    challenge_decision = random.choice(["challenge", "allow"])
+                    if challenge_decision == "challenge":
+                        print(f"{player.name} challenged {target.name}'s {action}.\n")
+                        victor = self.challenge(player, target, action)
+                        return victor
+                    else:
+                        continue
+        return None
 
 
     def add_player_available_actions(self, player, actions):
@@ -133,6 +147,14 @@ class CoupGame:
     
     def set_player_available_actions(self, player, actions):
         player.available_actions = actions
+
+    def return_to_deck(self, card):
+        self.deck.append(card)
+    
+    def return_to_deck_and_deal_a_card(self, target, card):
+        self.return_to_deck(card)
+        target.cards.remove(card)
+        target.cards.append(self.deal_card())
 
     def deal_card(self):
         return self.deck.pop(0)
@@ -198,7 +220,8 @@ class CoupGame:
     
     #Blockable Actions: foreign aid, steal, assassinate
     def block_foreign_aid(self, target, actor):
-        print(f"{target.name} blocked {actor.name}'s foreign aid.")
+        print(f"{target.name} blocked {actor.name}'s foreign aid.\n")
+        self.handle_next_turn()
         return
     
     def block_steal(self, player):
@@ -211,28 +234,33 @@ class CoupGame:
     # If target is human player, prompt human player to reveal a card
         victor = None
         if target == self.human_player:
-            victor = self.handle_human_challenge(challenger, target)
+            victor = self.handle_human_challenge(challenger, target, action)
         else:
             victor = self.handle_AI_challenge(challenger, target, action)
         return victor
 
     #Return the victor of the challenge
-    def handle_human_challenge(self, challenger, target):
+    def handle_human_challenge(self, challenger, target, action):
         # Prompt human player to choose a card to reveal
-        print(f"Which card do you want to reveal? {target.cards}")
-        revealed_card = input("Enter a card to reveal: ")
+        print(f"Which card do you want to reveal? {target.cards} \n")
+        revealed_card = ""
+        card_to_reveal = self.get_card_for_challenge(target, action)
+        while revealed_card not in target.cards:
+            revealed_card = input("Enter a card to reveal: \n")
+            if revealed_card not in target.cards:
+                print("That card is not in your hand. Please try again.\n")
 
-        # Check if card is in human player's cards
-        if revealed_card in target.cards:
-            target.cards.remove(revealed_card)
-            # Redistribute the lost card back to the deck
-            self.deck.append(revealed_card)
-            print(f"{self.human_player.name} revealed a {revealed_card}. \n")
+        if revealed_card == card_to_reveal:
+            print(f"{target.name} revealed a {revealed_card}.\n")
+            #Return card to deck, remove from target's cards, and deal a new card to target
+            self.return_to_deck_and_deal_a_card(target, revealed_card)
+            #Return the victor of the challenge
             return target
         else:
-            print(f"{self.human_player.name} did not have a {revealed_card}. \n")
-            self.lose_influence(self.human_player)
-            return challenger
+            print(f"{self.human_player.name} did not have a {card_to_reveal}. \n")
+            self.lose_influence(target)
+            return target
+
 
     #Return the victor of the challenge
     def handle_AI_challenge(self, challenger, target, action):
@@ -241,11 +269,14 @@ class CoupGame:
         revealed_card = self.reveal_card(target, card_to_reveal)
 
         if revealed_card:
-            print(f"{target.name} revealed a {card_to_reveal}.")
+            print(f"{target.name} revealed a {card_to_reveal}.\n")
+            self.return_to_deck_and_deal_a_card(target, revealed_card)
+            #Return the victor of the challenge
             return target
         else:
-            print(f"{target.name} did not have a {card_to_reveal}.")
+            print(f"{target.name} did not have a {card_to_reveal}.\n")
             self.lose_influence(target)
+            #Return the victor of the challenge
             return challenger
 
     def get_card_for_challenge(self, target, action):
