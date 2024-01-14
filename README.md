@@ -1,28 +1,30 @@
 # Coup Game Setup
 
 This README provides instructions on how to set up and run the `coup` game simulation on your local machine using a virtual environment.
+Link to Coup rules:
+https://www.ultraboardgames.com/coup/game-rules.php
 
 ## Getting Started
 
-1. Clone the repository:
+1. **Clone the repository:**
 
     ```bash
     git clone https://github.com/your-username/coup.git
     ```
 
-2. Navigate to the project directory:
+2. **Navigate to the project directory:**
 
     ```bash
     cd coup
     ```
 
-3. Create a virtual environment named `venv`:
+3. **Create a virtual environment named `venv`:**
 
     ```bash
     python -m venv venv
     ```
 
-4. Activate the virtual environment:
+4. **Activate the virtual environment:**
 
     - On Windows:
 
@@ -36,7 +38,7 @@ This README provides instructions on how to set up and run the `coup` game simul
         source venv/bin/activate
         ```
 
-5. Install project dependencies:
+5. **Install project dependencies:**
 
     ```bash
     pip install -r requirements.txt
@@ -44,7 +46,10 @@ This README provides instructions on how to set up and run the `coup` game simul
 
 ## Usage
 
-Run the Coup game simulation with the following command:
+This is a console-based approach to the Coup game simulation. Run the game with the following command:
 
 ```bash
 python -m coup.console
+```
+
+Please make sure you are in the Coup project directory before running the command.

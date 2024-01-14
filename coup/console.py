@@ -3,7 +3,7 @@ import random
 import time
 
 def setup_game():
-    return CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie"),
+    return CoupGame(human_player=Player("Player"), AI_players=[Player("AI_Bob"), Player("AI_Annie"),
                                                                 Player("AI_Chris"), Player("AI_Dave")])
 
 def play_game():
@@ -93,6 +93,7 @@ def print_game_state(game):
             print(f"{GREEN}{card}{RESET}")
         elif card == "assassin":
             print(f"{BLACK}{card}{RESET}")
+    print("\n")
 
     # Print the coins and number of cards of other alive players
     for player in game.players:
