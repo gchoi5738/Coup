@@ -8,7 +8,7 @@ This README provides instructions on how to set up and run the `coup` game simul
 1. **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/coup.git
+    git clone https://github.com/your-username/Coup.git
     ```
 
 2. **Navigate to the parent project directory:**
