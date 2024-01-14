@@ -3,10 +3,16 @@ import random
 import time
 
 def setup_game():
+    '''Setup a game with 1 human player and 3 AI players
+    Returns:
+        CoupGame: The game object
+    '''
     return CoupGame(human_player=Player("Player"), AI_players=[Player("AI_Bob"), Player("AI_Annie"),
                                                                 Player("AI_Chris"), Player("AI_Dave")])
 
 def play_game():
+    '''Play a game of Coup
+    '''
     restart = input('Do you want to play again? (yes/no) ')
     if restart.lower() == 'no':
         return
@@ -16,11 +22,13 @@ def play_game():
 
 #make initial game settings that can easily be changed
 def start_game():
+    '''Start a game of Coup
+    '''
    # Initialize the game
-   game = setup_game()
+    game = setup_game()
    
    # Main game loop
-   while not game.check_end_of_game():
+    while not game.check_end_of_game():
        # Print the current game state
        print_game_state(game)
        if game.human_player in game.dead_players:
@@ -62,6 +70,10 @@ def start_game():
 
 
 def print_game_state(game):
+    '''Print the current game state
+    Parameters:
+        game (CoupGame): The game object
+    '''
     # Define color codes
     RED = "\033[91m"
     BLUE = "\033[94m"
