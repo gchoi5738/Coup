@@ -27,17 +27,19 @@ def start_game():
            action = input("Enter an action: ")
            target = input("Enter a target (if applicable): ")
 
-
        else:
-           # Otherwise, generate a random action for the AI
-           #FOR TESTING REASONS, REFERENCE ACTION LIST FOR COMPLETED AND IN PROGRESS ACTIONS
-           action_list = ['income', 'foreign_aid', 'coup', 'tax', 'assassinate']
+           # Otherwise, generate a random action for the AI 
+           action_list = ['income', 'assassinate']
            action = random.choice(action_list)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets
            target = random.choice([player for player in game.players if player != current_player and player not in game.dead_players])
 
        # Execute the action
+       #Sleep for 1 second to make it easier to read if the AI is playing
+       if current_player != game.human_player:
+            time.sleep(1)
+           
        game.handle_actions(actor=current_player, action=action, target=target)
 
         # Check if the game has ended

@@ -3,13 +3,25 @@ import random
 import time
 
 DEFAULT_COINS = 2
-AVAILABLE_ACTIONS = ["income", "foreign_aid", "tax", "assassinate", "exchange", "steal", "coup"]
+AVAILABLE_ACTIONS = ["income", "foreign_aid", "tax", "exchange", "steal"]
 TARGETLESS_ACTIONS = ["income", "foreign_aid", "tax", "exchange"]
+
+#COSTS
+INCOME_GAIN = 1
+FOREIGN_AID_GAIN = 2
+TAX_GAIN = 3
+STEAL_GAIN = 2
+
+ASSASSIN_COST = 3
+COUP_COST = 7
+
+COUP_LIMIT = 10
+
 class Player:
 
     def __init__(self, name):
         self.name = name
-        self.coins = 2
+        self.coins = DEFAULT_COINS
         self.cards = []
         self.available_actions = AVAILABLE_ACTIONS
 
@@ -47,7 +59,7 @@ class CoupGame:
         self.current_turn_actions = []
 
 
-    #Reset all available actions to empty
+    #Reset all available actions to empty of player
     def reset_available_actions(self, player):
         player.available_actions = []
     
@@ -63,20 +75,18 @@ class CoupGame:
             return self.players[self.current_player_index + 1]
         
     def check_if_must_coup(self, actor, action, target):
-        #If actor has over 10 coins, they must coup
-        if actor.coins >= 10:
+        #If actor has over COUP LIMIT coins, they must coup
+        if actor.coins >= COUP_LIMIT:
             #If action wasn't already coup, return and prompt actor to coup
             if action != "coup":
                 print(f"{actor.name} has over 10 coins. They must coup.")
                 return True
             action = "coup"
             #If actor is human player, attempt to convert target to Player object
-            if actor == self.human_player:
-                target = self.get_player_by_name(target)
-                #If target is None, target is not a valid player
-                if target == None:
-                    print("Invalid target. Please try again.")
-                    return True
+
+            target = self.get_target_player(target)
+            if target == None:
+                return True
                 
             self.coup(actor, target)
             return True
@@ -91,8 +101,10 @@ class CoupGame:
             # If target_player is None, target is not a valid player
             if target_player is None:
                 print("Invalid target. Please try again.")
+                return None
             return target_player
-    #Handle all incoming actions
+        
+    #Handle all incoming Actions
     def handle_actions(self, actor, action, target):
 
         if action in TARGETLESS_ACTIONS:
@@ -115,12 +127,14 @@ class CoupGame:
                 return
             
         elif action == "coup":
-            if actor.coins < 7:
+            if actor.coins < COUP_COST:
                 print("You do not have enough coins to coup. Please try again.")
                 return
             #Handle different target types(target can be a string if human types, and a Player object if AI)
             target = self.get_target_player(target)
-
+            if target == None:
+                return
+            
             self.coup(actor, target)
             return
 
@@ -134,22 +148,33 @@ class CoupGame:
                 return
 
         elif action == "assassinate":
-            if actor.coins < 3:
+            if actor.coins < ASSASSIN_COST:
                 print("You do not have enough coins to assassinate. Please try again.")
                 return
             #Handle different target types(target can be a string if human types, and a Player object if AI)
             target = self.get_target_player(target)
-            victor = self.check_challenge(target=target, action='assassinate')
+            if target == None:
+                return
+
+            #Actor cannot challenge their own assassination attempt
+            victor = self.check_challenge(target=actor, action='assassinate')
             #Challenge was successful or no one challenged, check if any people block
             if victor == None or victor == actor:
                 if (self.check_if_target_blocks(actor, target, "assassinate", self.block_assassinate)):
+                    self.handle_next_turn()
                     return
                 else:
                     self.assassinate(actor, target)
                     return
 
         elif action == "exchange":
-            self.exchange(actor)
+            victor = self.check_challenge(target=actor, action='exchange')
+            #Challenge was successful, exchange
+            if victor == None or victor == actor:
+                self.exchange(actor)
+            else:
+                self.handle_next_turn()
+                return
         elif action == "steal":
             self.steal(actor, target)
         
@@ -164,10 +189,10 @@ class CoupGame:
         if target == self.human_player:
             block_decision = input("Do you want to block the action? Enter 'Block' or 'Allow': ")
             if block_decision.lower() == "block":
-                victor = self.check_challenge(target=self.human_player, action=action)
+                victor = self.check_challenge(target=self.human_player, action="block_" + action)
                 #Challenge was successful, block
                 if victor == None or victor == self.human_player:
-                    block_action(actor, target, action)
+                    block_action(actor, target)
                     return True
         return False
 
@@ -205,11 +230,12 @@ class CoupGame:
                             self.block_foreign_aid(player, actor)
                             return True
                     else:
-                        continue
+                        break
         return False
 
     #Prompt human player to challenge or allow the action. If challenge, return victor of challenge
     def check_challenge(self, target, action):
+
         #Create a challenge prompt for the human player if they aren't the target
         if target != self.human_player:
             #Prompt human player to challenge
@@ -278,18 +304,18 @@ class CoupGame:
 
     #Basic Actions: income, foreign aid, coup
     def income(self, player):
-        player.coins += 1
+        player.coins += INCOME_GAIN
         print(f"{player.name} took income. \n")
         self.handle_next_turn()
 
 
     def foreign_aid(self, player):
-        player.coins += 2
+        player.coins += FOREIGN_AID_GAIN
         print(f"{player.name} took foreign aid. \n")
         self.handle_next_turn()
 
     def coup(self, actor, target_player):
-        actor.coins -= 7
+        actor.coins -= COUP_COST
         self.lose_influence(target_player) 
         print(f"{actor.name} couped {target_player.name}. \n")
         self.handle_next_turn()
@@ -298,13 +324,13 @@ class CoupGame:
             
     #Influence Actions: tax, assassinate, exchange, steal
     def tax(self, player):
-        player.coins += 3
+        player.coins += TAX_GAIN
         print(f"{player.name} took tax. \n")
         self.handle_next_turn()
 
     def assassinate(self, actor, target):
-        if actor.coins >= 3:
-            actor.coins -= 3
+        if actor.coins >= ASSASSIN_COST:
+            actor.coins -= ASSASSIN_COST
             self.lose_influence(target)
             print(f"{actor.name} assassinated {target.name}. \n")
             self.handle_next_turn()
@@ -317,9 +343,9 @@ class CoupGame:
         player.cards.extend(revealed_cards)
 
     def steal(self, actor, target):
-        if target.coins >= 2:
-            actor.coins += 2
-            target.coins -= 2
+        if target.coins >= STEAL_GAIN:
+            actor.coins += STEAL_GAIN
+            target.coins -= STEAL_GAIN
         else:
             target.coins = 0
             actor.coins += target.coins
@@ -330,10 +356,18 @@ class CoupGame:
         self.handle_next_turn()
         return
     
-    def block_steal(self, player):
+    def block_steal(self, actor, target):
+
         return
     
-    def block_assassinate(self, player):
+    def block_assassinate(self, actor, target):
+        #Can't go to negative coins
+        print(f"{target.name} blocked {actor.name}'s assassination attempt.\n")
+        if actor.coins >= ASSASSIN_COST:
+            actor.coins -= ASSASSIN_COST
+        else:
+            actor.coins = 0
+        self.handle_next_turn()
         return
     
     def challenge(self, challenger, target, action):
@@ -397,10 +431,15 @@ class CoupGame:
             return "duke"
         elif action == "block_steal":
             return "captain" if "captain" in target.cards else "ambassador"
-        elif action == "block_assassinate":
-            return "contessa"
+        elif action == "steal":
+            return "captain" 
+        elif action == "assassinate":
+            return "assassin"
         elif action == "exchange":
             return "ambassador"
+        elif action == "block_assassinate":
+            return "contessa"
+        
         else:
             return None
 
@@ -478,18 +517,26 @@ class CoupGame:
         # Reset the game state for a new round
         self.deck = ["contessa", "duke", "captain", "ambassador", "assassin"] * 3
         self.shuffle_deck()
-        self.current_set_actions = []
         # Reset the players 
         for player in self.players:
-            player.coins = 2
+            player.coins = DEFAULT_COINS
             player.cards = []
             # Deal two cards to each player
             player.cards.extend([self.deal_card(), self.deal_card()])
 
         # Reset the current player index
         self.current_player_index = 0
-        #Reset all players' available actions
-        for player in self.players:
+
+        # Join the dead players back to the game
+        self.players.extend(self.dead_players)
+
+        # Reset all available actions
+        self.reset_alive_players_available_actions()
+
+        
+    def reset_alive_players_available_actions(self):
+        #Reset all alive players' available actions
+        for player in self.get_alive_players():
             player.available_actions = AVAILABLE_ACTIONS
 
     def handle_next_turn(self):
@@ -499,19 +546,27 @@ class CoupGame:
             self.reset_game()
             return
 
-        #Reset all players' available actions
-        for player in self.players:
-            player.available_actions = AVAILABLE_ACTIONS
+        # Reset all available actions for all players
+        self.reset_alive_players_available_actions()
+
         # Set current player index to next player
         self.set_next_player_turn()
 
-        # If player has over 10 coins, they must coup
+        #Allow assassinate if player has ASSASSIN COST coins
+        current_player_num_coins = self.get_current_player().coins
+        if current_player_num_coins >= ASSASSIN_COST:
+            #Check if greater than COUP_COST, if so, allow coup
+            if current_player_num_coins >= COUP_COST:
+                self.set_player_available_actions(self.current_player, AVAILABLE_ACTIONS  + ['assassinate'])
+            else:
+                self.set_player_available_actions(self.current_player, AVAILABLE_ACTIONS + ['assassinate', 'coup'])
+
+
+        # If player has over COUP LIMIT coins, they must coup
         #Set available actions to only coup
-        if self.get_current_player().coins >= 10:
+        if self.get_current_player().coins >= COUP_LIMIT:
             self.set_player_available_actions(self.current_player, ['coup'])
             return
-
-
         
     def make_random_AI_move(self):
         # Make a random AI move
