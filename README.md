@@ -61,11 +61,11 @@ Foreign Aid:
             CoupGame:
                 current_turn_actions = ['foreign_aid', 'block']
             P1:
-                actions = ['Challenge']
+                actions = ['Challenge', 'Allow']
             P2:
                 actions = ['Nothing']
             P3:
-                actions = ['Challenge']
+                actions = ['Challenge', 'Allow']
             Action:
                 name = 'block'
                 actor = P2
@@ -79,7 +79,7 @@ Foreign Aid:
             P1:
                 actions = ['Nothing']
             P2:
-                actions = ['Show challenged card', 'Concede Challenge']
+                actions = ['Show challenged card', 'Allow']
             P3:
                 actions = ['Nothing']
             Action:
@@ -91,7 +91,7 @@ Foreign Aid:
 
             IF CHALLENGE IS SUCCESSFUL
                 CoupGame:
-                    current_turn_actions = ['foreign_aid', 'block', 'challenge', 'challenge conceded']
+                    current_turn_actions = ['foreign_aid', 'block', 'challenge', 'allow']
                 P1:
                     actions = ['Nothing']
                 P2:
@@ -122,6 +122,41 @@ Foreign Aid:
                     exec block logic:
                         (execute cost of blocked action)
                     next_turn()
+
+
+
+P1: Human, P2: AI, P3: AI
+P2 foreign aid
+    CoupGame:
+        current_turn_actions = [{action: 'foreign_aid', actor: 'P2', target: 'None'}]
+    P1:
+        actions = ['block_foreign_aid', 'allow']
+    P2:
+        actions = ['nothing']
+    P3:
+        actions = ['block_foreign_aid', 'allow']
+
+P3 blocks foreign aid of P2
+    CoupGame:
+        current_turn_actions = [{action: 'foreign_aid', actor: 'P2', target: 'None'}, {action: 'block_foreign_aid', actor: P3, target: P2}]
+    P1:
+        actions = ['challenge', 'allow']
+    P2:
+        actions = ['challenge', 'allow']
+    P3:
+        actions = ['nothing']
+        
+P1 challenges P3's block foreign aid of P2
+    CoupGame:
+        current_turn_actions = [{action: 'foreign_aid', actor: 'P2', target: 'None'}, {action: 'block_foreign_aid', actor: P3, target: P2},
+                                {action: 'challenge', actor:'P1', target: P3}]
+    
+
+
+
+
+
+
     class Action:
        def  __init__(name):
             self.name = name
@@ -132,3 +167,12 @@ Foreign Aid:
             
 
 
+
+
+WHAT DOES HUMAN PLAYER NEED TO DO:
+    - ON CURRENT TURN:
+        ["income", "foreign_aid", "tax", "assassinate", "exchange", "steal"] including 'coup' if 7 coins or more
+    - IF CURRENT TURN IS NOT HUMAN PLAYER
+        - Check for any moves available to the player
+            -Challenges, allow, block
+    - Else, keep doing AI moves
