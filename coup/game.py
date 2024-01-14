@@ -2,12 +2,14 @@
 import random
 import time
 
+#CONSTANTS
 DEFAULT_COINS = 2
+DECK_MULITPLIER = 3
 AVAILABLE_ACTIONS = ["income", "foreign_aid", "tax", "exchange", "steal"]
 TARGETLESS_ACTIONS = ["income", "foreign_aid", "tax", "exchange"]
 
 #COSTS
-DECK_MULITPLIER = 3
+
 INCOME_GAIN = 1
 FOREIGN_AID_GAIN = 2
 TAX_GAIN = 3
@@ -19,7 +21,8 @@ COUP_COST = 7
 COUP_LIMIT = 10
 
 class Player:
-
+    ''' Class representing a player in Coup.
+    '''
     def __init__(self, name):
         self.name = name
         self.coins = DEFAULT_COINS
@@ -30,6 +33,8 @@ class Player:
         return f"{self.name}"
 
 class CoupGame:
+    ''' Class representing a game of Coup.
+    '''
     def __init__(self, human_player, AI_players):
         #Both human_player and AI_players are Player objects
         self.human_player = human_player
