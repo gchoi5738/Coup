@@ -1,10 +1,22 @@
 from coup.models import CoupGame, Player
 import random
 import time
+
+def setup_game():
+    return CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
+
+def play_game():
+    restart = input('Do you want to play again? (yes/no) ')
+    if restart.lower() == 'no':
+        return
+    else:
+        game = setup_game()
+        print_game_state(game)
+
 #make initial game settings that can easily be changed
 def start_game():
    # Initialize the game
-   game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
+   game = setup_game()
    
    # Main game loop
    while not game.check_end_of_game():
@@ -16,7 +28,8 @@ def start_game():
             if restart.lower() == 'no':
                 break
             else:
-                game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
+                game = setup_game()
+                print_game_state(game)
               
       
        # Get the current player
@@ -29,8 +42,8 @@ def start_game():
 
        else:
            # Otherwise, generate a random action for the AI 
-           action_list = ['income', 'assassinate']
-           action = random.choice(action_list)
+        #    action_list = ['income', 'exchange']
+           action = random.choice(current_player.available_actions)
            # Any player not in game.dead_players and not the current player
            #Remove current player from list of targets
            target = random.choice([player for player in game.players if player != current_player and player not in game.dead_players])
@@ -42,15 +55,11 @@ def start_game():
            
        game.handle_actions(actor=current_player, action=action, target=target)
 
-        # Check if the game has ended
+       # Check if the game has ended
        if game.check_end_of_game():
             print("Game over!")
-            restart = input('Do you want to play again? (yes/no) ')
-            if restart.lower() == 'no':
-                break
-            else:
-                game = CoupGame(human_player=Player("Gordon"), AI_players=[Player("AI_Bob"), Player("AI_Annie")])
-
+            play_game()
+     
 
 
 def print_game_state(game):
@@ -63,6 +72,7 @@ def print_game_state(game):
     GRAY = "\033[97m"
     RESET = "\033[0m"
 
+    print("\n" + "=" * 20)
     # Print the current player's turn
     print(f"\nCurrent player: {game.get_current_player().name}")
 
@@ -98,7 +108,7 @@ def print_game_state(game):
         print(f"Available actions for {current_player.name}: {', '.join(current_player.available_actions)}")
 
 
-
+    print("=" * 20 + "\n")
 
 if __name__ == "__main__":
    start_game()

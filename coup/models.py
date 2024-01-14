@@ -36,7 +36,6 @@ class CoupGame:
 
         #List of all players
         self.players = [human_player] + AI_players
-        print('self.players', self.players)
         self.dead_players = []
 
         #List of all cards in the game
@@ -115,6 +114,7 @@ class CoupGame:
         if (self.check_if_must_coup(actor, action, target)):
             return
         
+        #Basic actions
         elif action == "income":
             self.income(actor)
             return
@@ -137,7 +137,8 @@ class CoupGame:
             
             self.coup(actor, target)
             return
-
+        
+        #Influence actions
         elif action == "tax":
             victor = self.check_challenge(target=actor, action='tax')
             #Challenge was successful, tax
@@ -170,9 +171,6 @@ class CoupGame:
         elif action == "exchange":
             victor = self.check_challenge(target=actor, action='exchange')
             #Challenge was successful, exchange
-            print(victor == None or victor == actor)
-            print(victor)
-            print(actor)
             if victor == None or victor == actor:
                 self.exchange(actor)
             else:
@@ -181,7 +179,21 @@ class CoupGame:
             return
             
         elif action == "steal":
-            self.steal(actor, target)
+            #Handle different target types(target can be a string if human types, and a Player object if AI)
+            target = self.get_target_player(target)
+            if target == None:
+                return
+
+            #Actor cannot steal from themselves
+            victor = self.check_challenge(target=actor, action='steal')
+            #Challenge was successful or no one challenged, check if any people block
+            if victor == None or victor == actor:
+                if (self.check_if_target_blocks(actor, target, "steal", self.block_steal)):
+                    self.handle_next_turn()
+                    return
+                else:
+                    self.steal(actor, target)
+                    return
         
         else:
             print("Invalid action. Please try again.")
@@ -212,8 +224,6 @@ class CoupGame:
         return False
 
 
-
-
     #Return True if player blocks foreign aid, False otherwise. Also checks any challenges to the block
         #handled differently from block_steal and block_assassinate because foreign aid is a targetless action
     def check_if_player_blocks_foreign_aid(self, actor, action):
@@ -231,7 +241,6 @@ class CoupGame:
                     return True
                 
         else:
-            #Ask AI players if they want to block foreign aid
             #Look for first AI player to block foreign aid, then break
             for player in self.AI_players:
                 #Make sure AI player is not dead and is not the actor
@@ -295,6 +304,7 @@ class CoupGame:
         self.return_to_deck(card)
         target.cards.remove(card)
         target.cards.append(self.deal_card())
+        print(f"{target.name} lost a {card} and drew a new card from the deck. \n")
 
     def deal_card(self):
         return self.deck.pop(0)
@@ -316,13 +326,11 @@ class CoupGame:
                 return player
         return None  # Player not found
         
-
     #Basic Actions: income, foreign aid, coup
     def income(self, player):
         player.coins += INCOME_GAIN
         print(f"{player.name} took income. \n")
         self.handle_next_turn()
-
 
     def foreign_aid(self, player):
         player.coins += FOREIGN_AID_GAIN
@@ -335,8 +343,6 @@ class CoupGame:
         print(f"{actor.name} couped {target_player.name}. \n")
         self.handle_next_turn()
 
-
-            
     #Influence Actions: tax, assassinate, exchange, steal
     def tax(self, player):
         player.coins += TAX_GAIN
@@ -351,44 +357,64 @@ class CoupGame:
             self.handle_next_turn()
 
     def exchange(self, player):
-        # If player is human, prompt them to choose two cards to exchange
+        # If player is human, prompt them to choose cards to exchange
         if player == self.human_player:
-            print(f"Which two cards do you want to exchange? {player.cards} \n")
-            card1 = input("Enter the first card to exchange: \n")
-            while card1 not in player.cards:
-                print("That card is not in your hand. Please try again.\n")
-                card1 = input("Enter the first card to exchange: \n")
-            card2 = input("Enter the second card to exchange: \n")
-            while card2 not in player.cards or card2 == card1:
-                print("That card is not in your hand or you entered the same card twice. Please try again.\n")
-                card2 = input("Enter the second card to exchange: \n")
-            keep_card = input(f"Which card do you want to keep? {card1} or {card2}: \n")
-            while keep_card not in [card1, card2]:
-                print("Invalid choice. Please choose either {card1} or {card2}.\n")
-                keep_card = input(f"Which card do you want to keep? {card1} or {card2}: \n")
+            # First, draw two new cards from the deck
+            new_cards = [self.deal_card(), self.deal_card()]
 
-            player.cards.remove(keep_card)
-            discarded_card = card1 if keep_card == card2 else card2
-            # Redistribute the discarded card back to the deck
-            self.return_to_deck(discarded_card)
-            new_card = self.deal_card()
-            player.cards.append(new_card)
-            print(f"{self.human_player.name} exchanged a {discarded_card} for a new card from the deck. \n")
+            # Prompt the user for the number of cards they want to exchange
+            num_cards_to_exchange = -1  # Initialize with an invalid value
+            while num_cards_to_exchange < 0 or num_cards_to_exchange > len(player.cards):
+                num_cards_to_exchange = int(input("How many cards do you want to exchange? (0, 1, or 2): "))
+                if num_cards_to_exchange < 0 or num_cards_to_exchange > len(player.cards):
+                    print("Invalid number of cards. Please try again.")
+                    return
+
+            # If the player chooses to exchange cards, handle the exchange
+            if num_cards_to_exchange > 0:
+                for _ in range(num_cards_to_exchange):
+                    card_to_exchange = input(f"Choose a card to exchange ({player.cards}): ")
+                    while card_to_exchange not in player.cards:
+                        print("That card is not in your hand. Please try again.")
+                        card_to_exchange = input(f"Choose a card to exchange ({player.cards}): ")
+                    player.cards.remove(card_to_exchange)
+                    self.return_to_deck(card_to_exchange)
+
+                # Add the new cards to the player's hand
+                player.cards.extend(new_cards[:num_cards_to_exchange])
+
+                # Return any extra new cards to the deck
+                for card in new_cards[num_cards_to_exchange:]:
+                    self.return_to_deck(card)
+
+            print(f"{player.name} exchanged {num_cards_to_exchange} card(s).")
+            print(f"Your new hand is: {player.cards}")
+
+
         else:
-            # If player is AI, select two cards to exchange randomly
-            card_to_exchange = random.sample(player.cards, 2)
-            keep_card = random.choice(card_to_exchange)
-            card_to_exchange.remove(keep_card)
-            discarded_card = card_to_exchange[0]
-            for card in card_to_exchange:
-                player.cards.remove(card)
-            # Redistribute the discarded card back to the deck
-            self.return_to_deck(discarded_card)
-            new_card = self.deal_card()
-            player.cards.append(new_card)
-            print(f"{player.name} exchanged a {discarded_card} for a new card from the deck. \n")
+            # For AI, randomly decide to swap both, one, or keep both
+            decision = random.choice(['swap_both', 'swap_one', 'keep_both'])
+            if decision == 'swap_both':
+                cards_to_exchange = random.sample(player.cards, 2)
+                for card in cards_to_exchange:
+                    player.cards.remove(card)
+                    self.return_to_deck(card)
+                new_cards = [self.deal_card(), self.deal_card()]
+                player.cards.extend(new_cards)
+                print(f"{player.name} exchanged both cards for new cards from the deck. \n")
+            elif decision == 'swap_one':
+                card_to_exchange = random.choice(player.cards)
+                player.cards.remove(card_to_exchange)
+                self.return_to_deck(card_to_exchange)
+                new_card = self.deal_card()
+                player.cards.append(new_card)
+                print(f"{player.name} exchanged one card for a new card from the deck. \n")
+            else:
+                print(f"{player.name} decided to keep both cards. \n")
 
         self.handle_next_turn()
+        return
+
 
 
     def steal(self, actor, target):
@@ -398,6 +424,9 @@ class CoupGame:
         else:
             target.coins = 0
             actor.coins += target.coins
+
+        print(f"{actor.name} stole {STEAL_GAIN} coins from {target.name}. \n")
+        self.handle_next_turn()
     
     #Blockable Actions: foreign aid, steal, assassinate
     def block_foreign_aid(self, target, actor):
@@ -406,7 +435,9 @@ class CoupGame:
         return
     
     def block_steal(self, actor, target):
-
+        #Can't go to negative coins
+        print(f"{target.name} blocked {actor.name}'s steal attempt.\n")
+        self.handle_next_turn()
         return
     
     def block_assassinate(self, actor, target):
@@ -558,9 +589,14 @@ class CoupGame:
 
         return None  # No influence to lose
 
+    # Add this method to your CoupGame class
+    def is_human_player_last(self):
+        alive_players = self.get_alive_players()
+        return len(alive_players) == 1 and alive_players[0] == self.human_player
+
+    # Modify the check_end_of_game method
     def check_end_of_game(self):
-        # Check if the game has ended
-        return len(self.players) == 1
+        return self.human_player not in self.players or self.is_human_player_last()
 
     def reset_game(self):
         # Reset the game state for a new round
@@ -598,6 +634,10 @@ class CoupGame:
         # Reset all available actions for all players
         self.reset_alive_players_available_actions()
 
+        #Make sure any players who are dead cannot perform actions
+        for player in self.dead_players:
+            self.set_player_available_actions(player, [])
+
         # Set current player index to next player
         self.set_next_player_turn()
 
@@ -605,7 +645,7 @@ class CoupGame:
         current_player_num_coins = self.get_current_player().coins
         if current_player_num_coins >= ASSASSIN_COST:
             #Check if greater than COUP_COST, if so, allow coup
-            if current_player_num_coins >= COUP_COST:
+            if current_player_num_coins < COUP_COST:
                 self.set_player_available_actions(self.current_player, AVAILABLE_ACTIONS  + ['assassinate'])
             else:
                 self.set_player_available_actions(self.current_player, AVAILABLE_ACTIONS + ['assassinate', 'coup'])
